@@ -210,6 +210,10 @@ You can ship this project in 3 ways:
 2. Native desktop window app (`LocalStereoTranscriberDesktop.app`)
 3. DMG installer containing both apps
 
+Windows package:
+
+4. Portable launcher zip (`LocalStereoTranscriberLauncher-windows.zip`)
+
 Install packaging dependencies first:
 
 ```bash
@@ -251,6 +255,21 @@ You can also run these via VS Code tasks:
 4. `release-gate`
 
 Build outputs are created in `dist/`.
+
+### Windows distribution (no admin required)
+
+For colleagues on Windows, use the portable zip package from GitHub Actions artifacts or GitHub Releases.
+
+1. Download `LocalStereoTranscriberLauncher-windows.zip`
+2. Extract it to a user folder (for example `Downloads` or `Documents`)
+3. Run `LocalStereoTranscriberLauncher.exe`
+
+Why this does not require administrator rights:
+
+- It is a portable app (no installer writing to `Program Files`)
+- It runs from the user folder and writes user data/logs in user-space locations
+
+Note: On unsigned builds, Windows SmartScreen may show a warning before first run.
 
 Both macOS app bundles include:
 

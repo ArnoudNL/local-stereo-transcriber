@@ -1,5 +1,8 @@
 name: ci
 
+permissions:
+  contents: write
+
 on:
   push:
   pull_request:
@@ -93,3 +96,77 @@ jobs:
           echo "Desktop backend smoke test failed"
           cat /tmp/desktop_smoke.log || true
           exit 1
+
+  build_windows_launcher:
+    runs-on: windows-latest
+    needs: quality
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          python -m venv .venv
+          .\.venv\Scripts\python -m pip install --upgrade pip
+          .\.venv\Scripts\pip install -r requirements-dev.txt
+
+      - name: Build Windows launcher
+        shell: pwsh
+        run: |
+          .\scripts\build_windows_launcher.ps1
+
+      - name: Smoke test Windows launcher
+        shell: pwsh
+        run: |
+          $exe = "$PWD\dist\LocalStereoTranscriberLauncher\LocalStereoTranscriberLauncher.exe"
+          $proc = Start-Process -FilePath $exe -PassThru
+
+          try {
+            $ok = $false
+            for ($i = 0; $i -lt 45; $i++) {
+              try {
+                Invoke-WebRequest -Uri "http://127.0.0.1:8501" -UseBasicParsing | Out-Null
+                $ok = $true
+                break
+              } catch {
+                Start-Sleep -Seconds 1
+              }
+            }
+
+            if (-not $ok) {
+              Write-Error "Windows launcher smoke test failed"
+            }
+          } finally {
+            Get-CimInstance Win32_Process | Where-Object { $_.ParentProcessId -eq $proc.Id } | ForEach-Object {
+              Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
+            }
+            Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+          }
+
+      - name: Create Windows zip package
+        shell: pwsh
+        run: |
+          $zip = "$PWD\dist\LocalStereoTranscriberLauncher-windows.zip"
+          if (Test-Path $zip) {
+            Remove-Item $zip -Force
+          }
+          Compress-Archive -Path "$PWD\dist\LocalStereoTranscriberLauncher\*" -DestinationPath $zip
+
+      - name: Upload Windows package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LocalStereoTranscriberLauncher-windows
+          path: dist/LocalStereoTranscriberLauncher-windows.zip
+
+      - name: Attach Windows package to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/LocalStereoTranscriberLauncher-windows.zip
