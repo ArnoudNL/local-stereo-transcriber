@@ -19,14 +19,15 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
+          python -m venv .venv
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/pip install -r requirements-dev.txt
 
       - name: Lint and format checks
         run: |
-          isort --check-only .
-          black --check .
-          pylint --jobs=1 transcribe_dual_channel_local.py streamlit_app.py
+          .venv/bin/isort --check-only .
+          .venv/bin/black --check .
+          .venv/bin/pylint --jobs=1 transcribe_dual_channel_local.py streamlit_app.py
 
   build_and_smoke_macos_apps:
     runs-on: macos-latest
@@ -43,8 +44,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
+          python -m venv .venv
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/pip install -r requirements-dev.txt
 
       - name: Build launcher app
         run: bash scripts/build_launcher_app.sh
