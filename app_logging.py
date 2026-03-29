@@ -15,6 +15,16 @@ _GLOBAL_CONFIGURED = False
 _COMPONENTS_CONFIGURED: set[str] = set()
 
 
+def _get_console_sink():
+    """Return a usable console stream sink, or None when no console is attached."""
+    for candidate in (sys.stderr, sys.stdout):
+        if candidate is None:
+            continue
+        if hasattr(candidate, "write"):
+            return candidate
+    return None
+
+
 def _add_sink_with_fallback(*, sink, level: str, enqueue: bool, **kwargs) -> bool:
     """Add a log sink, falling back to non-queued mode when queue creation fails."""
     try:
@@ -52,12 +62,17 @@ def setup_logging(component: str, file_name: str | None = None):
 
     if not _GLOBAL_CONFIGURED:
         logger.remove()
-        configured_enqueue = _add_sink_with_fallback(
-            sink=sys.stderr,
-            level=level,
-            enqueue=enqueue,
-            format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {extra[component]} | {message}",
-        )
+        console_sink = _get_console_sink()
+        if console_sink is not None:
+            configured_enqueue = _add_sink_with_fallback(
+                sink=console_sink,
+                level=level,
+                enqueue=enqueue,
+                format=(
+                    "{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} "
+                    "| {extra[component]} | {message}"
+                ),
+            )
         _GLOBAL_CONFIGURED = True
 
     if component not in _COMPONENTS_CONFIGURED:
