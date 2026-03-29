@@ -1,0 +1,8 @@
+faster-whisper>=1.1.0
+streamlit>=1.36.0
+
+# Optional but recommended local CPU runtime wheels for faster-whisper.
+# Keep this in runtime requirements so fresh machines work without extra steps.
+ctranslate2>=4.4.0
+onnxruntime>=1.19.0
+loguru>=0.7.3

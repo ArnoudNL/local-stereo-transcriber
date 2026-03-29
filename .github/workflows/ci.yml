@@ -1,0 +1,93 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Lint and format checks
+        run: |
+          isort --check-only .
+          black --check .
+          pylint --jobs=1 transcribe_dual_channel_local.py streamlit_app.py
+
+  build_and_smoke_macos_apps:
+    runs-on: macos-latest
+    needs: quality
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Build launcher app
+        run: bash scripts/build_launcher_app.sh
+
+      - name: Build desktop app
+        run: bash scripts/build_desktop_app.sh
+
+      - name: Smoke test launcher app
+        run: |
+          set -euo pipefail
+          APP_BIN="$PWD/dist/LocalStereoTranscriberLauncher.app/Contents/MacOS/LocalStereoTranscriberLauncher"
+          "$APP_BIN" >/tmp/launcher_smoke.log 2>&1 &
+          PID=$!
+          trap 'pkill -P "$PID" || true; kill "$PID" 2>/dev/null || true' EXIT
+
+          for i in {1..30}; do
+            if curl -sSf http://127.0.0.1:8501 >/dev/null; then
+              echo "Launcher smoke test passed"
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "Launcher smoke test failed"
+          cat /tmp/launcher_smoke.log || true
+          exit 1
+
+      - name: Smoke test desktop backend mode
+        run: |
+          set -euo pipefail
+          APP_BIN="$PWD/dist/LocalStereoTranscriberDesktop.app/Contents/MacOS/LocalStereoTranscriberDesktop"
+          "$APP_BIN" --serve --port 8502 >/tmp/desktop_smoke.log 2>&1 &
+          PID=$!
+          trap 'pkill -P "$PID" || true; kill "$PID" 2>/dev/null || true' EXIT
+
+          for i in {1..30}; do
+            if curl -sSf http://127.0.0.1:8502 >/dev/null; then
+              echo "Desktop backend smoke test passed"
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "Desktop backend smoke test failed"
+          cat /tmp/desktop_smoke.log || true
+          exit 1

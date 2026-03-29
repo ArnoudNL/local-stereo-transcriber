@@ -1,0 +1,17 @@
+-r requirements.txt
+
+# NOTE:
+# requirements-dev.txt is for Python packages only.
+# System CLI tools (for example ripgrep) are managed via Brewfile.
+
+# Linting / formatting / tests
+pylint>=3.2.0
+black>=24.8.0
+isort>=5.13.0
+pytest>=8.3.0
+pre-commit>=3.8.0
+
+# Packaging / distribution
+pyinstaller>=6.10.0
+pywebview>=5.3.0
+pillow>=10.4.0

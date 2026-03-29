@@ -1,0 +1,29 @@
+[MAIN]
+ignore=.venv,__pycache__,local_models
+jobs=0
+persistent=yes
+
+[MESSAGES CONTROL]
+# Keep lint useful without forcing heavy docstring boilerplate for this app script.
+disable=
+    missing-module-docstring,
+    missing-function-docstring,
+    missing-class-docstring,
+    too-few-public-methods,
+    broad-exception-caught,
+    duplicate-code
+
+[FORMAT]
+max-line-length=100
+
+[BASIC]
+good-names=i,j,k,f,st
+
+[DESIGN]
+max-args=14
+max-locals=45
+max-statements=80
+max-positional-arguments=8
+
+[TYPECHECK]
+generated-members=streamlit.*,setnchannels,setsampwidth,setframerate,setcomptype,writeframes
