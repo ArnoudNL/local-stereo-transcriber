@@ -126,21 +126,44 @@ jobs:
         shell: pwsh
         run: |
           $exe = "$PWD\dist\LocalStereoTranscriberLauncher\LocalStereoTranscriberLauncher.exe"
+          $logDir = "$PWD\logs"
+          $logPath = "$logDir\streamlit_launcher.log"
+
+          if (Test-Path $logPath) {
+            Remove-Item $logPath -Force
+          }
+
           $proc = Start-Process -FilePath $exe -PassThru
 
           try {
             $ok = $false
+            $url = $null
             for ($i = 0; $i -lt 45; $i++) {
+              if (-not $url -and (Test-Path $logPath)) {
+                $line = Get-Content $logPath -Tail 20 | Select-String -Pattern 'Launcher starting Streamlit at (http://127\.0\.0\.1:\d+)'
+                if ($line) {
+                  $url = $line.Matches[-1].Groups[1].Value
+                }
+              }
+
               try {
-                Invoke-WebRequest -Uri "http://127.0.0.1:8501" -UseBasicParsing | Out-Null
-                $ok = $true
-                break
+                if ($url) {
+                  Invoke-WebRequest -Uri $url -UseBasicParsing | Out-Null
+                  $ok = $true
+                  break
+                }
               } catch {
                 Start-Sleep -Seconds 1
               }
+
+              Start-Sleep -Milliseconds 250
             }
 
             if (-not $ok) {
+              if (Test-Path $logPath) {
+                Write-Host "===== launcher log ====="
+                Get-Content $logPath -Tail 120
+              }
               Write-Error "Windows launcher smoke test failed"
             }
           } finally {
